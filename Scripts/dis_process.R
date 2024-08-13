@@ -14,21 +14,22 @@ library(openxlsx)
 library(readxl)
 
 path_dis_export <- "Data/OU Activity Indicator Results Report - Export All.xlsx"
-path_map_indicator <- "Documents/indicator_mapper.xlsx"
+path_map_indicator <- "Documents/indicator_mapper_2024-08-13.csv"
+path_dis_processed <- "Dataout/"
 
 # GLOBAL VARIABLES --------------------------------------------------------
-  
-  ref_id <- "fc252b5c"
+
+ref_id <- "fc252b5c"
 
 # LOAD DATA ------------------------------------------------------------------
 
 df <- read_excel(path_dis_export,
                  sheet = "OU Activity Indicator Results")
 
-map_indicator <- read_excel(path_map_indicator) |> 
+map_indicator <- read_csv(path_map_indicator) |> 
   clean_names() |> 
-  select(data_element_id, disaggregate_type) |> 
-  filter(disaggregate_type != "")
+  select(data_element_id, disag_type) |> 
+  filter(disag_type != "")
 
 
 # MUNGE -------------------------------------------------------------------
@@ -65,12 +66,17 @@ df1 <- df |>
   
   # join to code for disaggregate_type and remove NA
   left_join(map_indicator, join_by(data_element_id)) |> 
-  filter(disaggregate_type != "") |> 
+  filter(disag_type != "") |> 
   
   # final data frame cleaning
   relocate(indicator_origin, .after = activity_code) |>
   relocate(udn, .before = indicator_code) |> 
-  relocate(disaggregate_type, .after = disaggregate_name) |> 
-  relocate(data_element_id, .after = disaggregate_type) |> 
+  relocate(disag_type, .after = disaggregate_name) |> 
+  relocate(data_element_id, .after = disag_type) |> 
   relocate(period_type, .before = fiscal_year)
 
+
+# DATAOUT -----------------------------------------------------------------
+
+df1 |> 
+  write_csv()
