@@ -18,7 +18,7 @@ library(glue)
   
   ref_id <- "e56b3660"
   
-  path_raw_map_indicator <- "Documents/OU Activity Indicator Results Report - Export All (2).xlsx"
+  path_raw_map_indicator <- "Documents/OU Activity Indicator Results Report - Export All (3).xlsx"
   sys_date <- Sys.Date()
   path_new_map_indicator <- glue("Documents/indicator_mapper_{sys_date}.csv")
 
@@ -34,7 +34,8 @@ library(glue)
     select(indicator_code, disaggregate_code, disaggregate_name, disag_type) |> 
     mutate(data_element_id = str_c(indicator_code, disaggregate_code, disaggregate_name, sep = "-")) |> 
     distinct(data_element_id, disag_type) |> 
-    relocate(disag_type, .after = everything())
+    relocate(disag_type, .after = everything()) |> 
+    rename(disaggregate_type = disag_type)
   
 # DATAOUT -----------------------------------------------------------
 
