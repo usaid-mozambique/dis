@@ -29,46 +29,50 @@ df <- read_excel(path_dis_export,
                  sheet = "OU Activity Indicator Results")
 
 map_indicator <- read_csv(path_map_indicator) |> 
-  clean_names() |> 
-  select(data_element_id, disaggregate_type) |> 
   filter(disaggregate_type != "")
-
 
 # MUNGE -------------------------------------------------------------------
 
-df1 <- df |>
+df_processed <- df |>
   
-  # clean data frame
+  # clean and filter data frame
   clean_names() |> 
-  select(!c("reporting_organization", 
-            "operating_unit",
-            "disaggregate_country",
-            "disaggregate_commodity",
-            "collection_period_sort_order",
-            "initiative_review_status",
-            "is_disaggregate_blank",
-            "collection_period_comments")) |>
+  select(!all_of(vars_remove)) |> 
   rename(period = collection_period_name,
          review_status = collection_review_status) |> 
-  
-  mutate(activity_code = str_replace(activity_code, "^0+", "")) |> 
+  mutate(
+    activity_code = str_replace(activity_code, "^0+", "")) |> 
   filter(activity_code %in% iho_activities) |> 
   
-  # create unique data element id variable and coerce actuals and targets to numerics
-  mutate(data_element_id = str_c(indicator_code, disaggregate_code, disaggregate_name, sep = "-"),
-         actual = as.numeric(actual),
-         target = as.numeric(target)) |> 
+  mutate(
+    # create unique data element id variable
+    data_element_id = str_c(indicator_code, disaggregate_code, disaggregate_name, sep = "-"),
+    
+    # coerce actuals and targets to numeric
+    across(.cols = c(actual, target), 
+           .fns = ~ str_remove_all(.x, ",")
+           ),
+    
+    # create period type and period values
+    period_type = case_when(
+      str_detect(period, "Annual") ~ "Annual",
+      str_detect(period, "Qtr") ~ "Quarter"),
+    
+    period_temp = case_when(
+      str_detect(period_type, "Annual") ~ "",
+      str_detect(period, "Qtr1") ~ "Q1",
+      str_detect(period, "Qtr2") ~ "Q2",
+      str_detect(period, "Qtr3") ~ "Q3",
+      str_detect(period, "Qtr4") ~ "Q4"),
+    
+    period = case_when(
+      str_detect(period_type, "Annual") ~ NA,
+      str_detect(period_type, "Quarter") ~ str_c(fiscal_year, 
+                                                 period_temp, 
+                                                 sep = " ")
+      )
+  ) |> 
   
-  # create period variables
-  mutate(period_type = case_when(str_detect(period, "Annual") ~ "Annual",
-                                 str_detect(period, "Qtr") ~ "Quarter"),
-         period_temp = case_when(str_detect(period_type, "Annual") ~ "",
-                                 str_detect(period, "Qtr1") ~ "Q1",
-                                 str_detect(period, "Qtr2") ~ "Q2",
-                                 str_detect(period, "Qtr3") ~ "Q3",
-                                 str_detect(period, "Qtr4") ~ "Q4"),
-         period = case_when(str_detect(period_type, "Annual") ~ NA,
-                            str_detect(period_type, "Quarter") ~ str_c(fiscal_year, period_temp, sep = " "))) |>
   select(!period_temp) |> 
   
   # rename activities
@@ -83,26 +87,26 @@ df1 <- df |>
     activity_code ==  "3213" ~ "Last Mile Supply Chain",
     activity_code ==  "4893" ~ "SPEED",
     activity_code ==  "4940" ~ "IFPI",
-    activity_code ==  "5046" ~ "Momentum Routine Immun.",
+    activity_code ==  "5046" ~ "M-RITE",
     activity_code ==  "5250" ~ "Amostra",
     activity_code ==  "5446" ~ "Feed the Future",
     activity_code ==  "6226" ~ "MCAPS",
     activity_code ==  "5472" ~ "Advancing Girls' Ed.",
     activity_code ==  "6366" ~ "MSSFPO",
-    activity_code ==  "6769" ~ "Momentum Delivery",
-    .default = activity_name
-  )) |> 
+    activity_code ==  "6769" ~ "MPHD",
+    .default = activity_name)
+  ) |> 
 
   # join to code for disaggregate_type and remove NA
-  left_join(map_indicator, join_by(data_element_id)) |> 
-  filter(disaggregate_type != "") |> 
+  inner_join(map_indicator, join_by(data_element_id)) |>
   
   # final data frame cleaning
-  relocate(indicator_origin, .after = activity_code) |>
-  relocate(udn, .before = indicator_code) |> 
-  relocate(disaggregate_type, .after = disaggregate_name) |> 
-  relocate(data_element_id, .after = disaggregate_type) |> 
-  relocate(period_type, .before = fiscal_year)
+  relocate(indicator_origin, .before = indicator_code) |>
+  relocate(indicator_name, .before = udn) |>
+  relocate(disaggregate_type, .before = disaggregate_name) |> 
+  relocate(data_element_id, .before = disaggregate_code) |> 
+  relocate(period_type, .before = fiscal_year) |> 
+  relocate(review_status, .after = everything())
 
 ###
 ### Note that 2 data_element_ids are duplicated which generate additional observations
@@ -119,5 +123,6 @@ df1 <- df |>
 
 # DATAOUT -----------------------------------------------------------------
 
-df1 |> 
+df_processed |> 
   write_csv(path_dis_processed)
+  

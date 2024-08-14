@@ -18,3 +18,14 @@ iho_activities <- c(
   "6366", # MSSFPO
   "6769"  # Momentum Delivery
 )
+
+vars_remove <- c(
+  "reporting_organization", 
+   "operating_unit",
+   "disaggregate_country",
+   "disaggregate_commodity",
+   "collection_period_sort_order",
+   "initiative_review_status",
+   "is_disaggregate_blank",
+   "collection_period_comments"
+)
