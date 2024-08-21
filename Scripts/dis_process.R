@@ -16,6 +16,7 @@ library(readxl)
 path_dis_export <- "Data/OU Activity Indicator Results Report - Export All.xlsx"
 path_map_indicator <- "Documents/indicator_mapper_2024-08-14.csv"
 path_dis_processed <- "Dataout/dis_processed.csv"
+path_dis_indicator_shortname <- "Documents/indicator_shortname.xlsx"
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
@@ -31,7 +32,16 @@ df <- read_excel(path_dis_export,
 map_indicator <- read_csv(path_map_indicator) |> 
   filter(disaggregate_type != "")
 
+indicator_shortname <- read_excel(path_dis_indicator_shortname) |> 
+  select(-length) |> 
+  clean_names()
+
 # MUNGE -------------------------------------------------------------------
+
+
+map_indicator_shortname <- map_indicator |> 
+ left_join(indicator_shortname, by = "indicator_name")
+
 
 df_processed <- df |>
   
@@ -98,7 +108,7 @@ df_processed <- df |>
   ) |> 
 
   # join to code for disaggregate_type and remove NA
-  inner_join(map_indicator, join_by(data_element_id)) |>
+  inner_join(map_indicator_shortname, join_by(data_element_id)) |>
   
   # final data frame cleaning
   relocate(indicator_origin, .before = indicator_code) |>
@@ -107,6 +117,9 @@ df_processed <- df |>
   relocate(data_element_id, .before = disaggregate_code) |> 
   relocate(period_type, .before = fiscal_year) |> 
   relocate(review_status, .after = everything())
+
+
+
 
 ###
 ### Note that 2 data_element_ids are duplicated which generate additional observations
