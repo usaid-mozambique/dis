@@ -80,7 +80,18 @@ df_processed <- df |>
       str_detect(period_type, "Quarter") ~ str_c(fiscal_year, 
                                                  period_temp, 
                                                  sep = " ")
-      )
+      ),
+    
+    indicator_origin_sub = case_when(
+      indicator_origin == "FTF" ~ "PPR",
+      indicator_origin == "Std FA" ~ "PPR",
+      .default = indicator_origin),
+    
+    review_status = case_when(
+      review_status == "DE In-Progress" ~ "Data Entry In-Progress",
+      review_status == "DE Not Started" ~ "Data Entry Not Started",
+      .default = review_status
+    )
   ) |> 
   
   select(!period_temp) |> 
@@ -107,9 +118,12 @@ df_processed <- df |>
     .default = activity_name)
   ) |> 
 
+
+ 
+
   # join to code for disaggregate_type and remove NA
   inner_join(map_indicator_shortname, join_by(data_element_id)) |>
-  
+  filter(disaggregate_type %in% c("Age", "Sex", "Province", "Total", "Treatment Type", "Vaccine")) |> 
   # final data frame cleaning
   relocate(indicator_origin, .before = indicator_code) |>
   relocate(indicator_name, .before = udn) |>
@@ -119,7 +133,7 @@ df_processed <- df |>
   relocate(review_status, .after = everything())
 
 
-
+  
 
 ###
 ### Note that 2 data_element_ids are duplicated which generate additional observations
