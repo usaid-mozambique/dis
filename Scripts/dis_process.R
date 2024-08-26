@@ -124,6 +124,10 @@ df_processed <- df |>
   # join to code for disaggregate_type and remove NA
   inner_join(map_indicator_shortname, join_by(data_element_id)) |>
   filter(disaggregate_type %in% c("Age", "Sex", "Province", "Total", "Treatment Type", "Vaccine")) |> 
+  mutate(disaggregate_name = case_when(
+    disaggregate_type == "Total" ~ "Total",
+    .default = disaggregate_name)
+  ) |>
   # final data frame cleaning
   relocate(indicator_origin, .before = indicator_code) |>
   relocate(indicator_name, .before = udn) |>
